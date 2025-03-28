@@ -31,9 +31,9 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label for="file" class="form-label">Upload File (if required):</label>
-                                <input class="form-control" type="file" id="file" name="file">
-                                <div class="form-text">Upload any ZIP, CSV, or other files mentioned in the question.</div>
+                                <label for="file" class="form-label">Upload Files (if required):</label>
+                                <input class="form-control" type="file" id="file" name="file" multiple>
+                                <div class="form-text">Upload any ZIP, CSV, JSON, TXT, or other files mentioned in the question. You can select multiple files.</div>
                             </div>
                             
                             <div class="d-grid gap-2">
@@ -75,7 +75,8 @@
                         <pre><code>curl -X POST "/api/" \
   -H "Content-Type: multipart/form-data" \
   -F "question=Your question here" \
-  -F "file=@path/to/your/file.zip"</code></pre>
+  -F "file=@path/to/your/file1.zip" \
+  -F "file=@path/to/your/file2.csv"</code></pre>
                         <p>The response will be a JSON object with the answer:</p>
                         <pre><code>{
   "answer": "Your answer will appear here"

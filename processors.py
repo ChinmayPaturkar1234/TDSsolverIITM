@@ -20,29 +20,35 @@ def process_csv(file_path):
         # Read the CSV file
         df = pd.read_csv(file_path)
         
-        # Check if the CSV has an "answer" column
-        if 'answer' in df.columns:
-            logger.debug("Found 'answer' column in CSV")
+        # Check if the CSV has a column containing "answer" (case-insensitive)
+        answer_cols = [col for col in df.columns if 'answer' in col.lower()]
+        
+        if answer_cols:
+            logger.debug(f"Found answer column(s): {answer_cols}")
+            primary_answer_col = answer_cols[0]  # Use the first one if multiple exist
+            
             # Extract the value from the answer column
-            answer_values = df['answer'].tolist()
+            answer_values = df[primary_answer_col].tolist()
             
             # If there's only one value, return it directly
             if len(answer_values) == 1:
-                return f"The value in the 'answer' column is: {answer_values[0]}"
+                return f"The value in the '{primary_answer_col}' column is: {answer_values[0]}"
             else:
                 # Otherwise, return all values
-                return f"Values in the 'answer' column: {answer_values}"
+                return f"Values in the '{primary_answer_col}' column: {answer_values}"
         
-        # If the dataframe is small, return a string representation
+        # If the dataframe is small, return a complete string representation
         if len(df) <= 100 and len(df.columns) <= 20:
             return f"CSV File Contents:\n{df.to_string()}"
         
-        # For larger files, return a summary
+        # For larger files, return a more comprehensive summary
         return (
             f"CSV File Summary:\n"
             f"Rows: {len(df)}\n"
             f"Columns: {', '.join(df.columns)}\n"
-            f"First 5 rows:\n{df.head().to_string()}"
+            f"First 5 rows:\n{df.head().to_string()}\n"
+            f"Last 5 rows:\n{df.tail().to_string()}\n"
+            f"Data types:\n{df.dtypes.to_string()}"
         )
     except Exception as e:
         logger.error(f"Error processing CSV file: {str(e)}")

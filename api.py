@@ -1,9 +1,8 @@
 import os
 import logging
-from utils import extract_zip, process_files
-from processors import process_csv, process_text_file
 import tempfile
-import openai
+from utils import extract_zip, process_files
+from processors import process_csv, process_text_file, parse_json
 from openai import OpenAI
 
 # Configure logging
@@ -35,31 +34,69 @@ def process_request(question, files):
     with tempfile.TemporaryDirectory() as temp_dir:
         # Process uploaded files
         for file in files:
-            file_path = os.path.join(temp_dir, file.filename)
-            file.save(file_path)
+            # Skip empty files or files with empty filenames
+            if not file or not file.filename or file.filename == '':
+                logger.warning("Skipping empty file or file with no filename")
+                continue
+                
+            # Sanitize filename to prevent directory traversal
+            safe_filename = os.path.basename(file.filename)
             
-            # Check if the file is a zip file
-            if file.filename.endswith('.zip'):
-                logger.debug(f"Extracting zip file: {file.filename}")
-                extracted_files = extract_zip(file_path, temp_dir)
-                logger.debug(f"Extracted files: {extracted_files}")
-            else:
-                extracted_files.append(file_path)
+            # Create a valid file path
+            file_path = os.path.join(temp_dir, safe_filename)
+            logger.debug(f"Saving file to: {file_path}")
+            
+            # Save the file
+            try:
+                file.save(file_path)
+                logger.debug(f"Successfully saved file: {safe_filename}")
+                
+                # Check if the file is a zip file
+                if safe_filename.endswith('.zip'):
+                    logger.debug(f"Extracting zip file: {safe_filename}")
+                    extracted_files = extract_zip(file_path, temp_dir)
+                    logger.debug(f"Extracted files: {extracted_files}")
+                else:
+                    extracted_files.append(file_path)
+            except Exception as e:
+                logger.error(f"Error saving file {safe_filename}: {str(e)}")
+                raise
         
         # Process extracted files based on type
         for file_path in extracted_files:
             file_content = None
+            file_name = os.path.basename(file_path)
+            file_extension = os.path.splitext(file_path)[1].lower()
             
-            if file_path.endswith('.csv'):
-                logger.debug(f"Processing CSV file: {file_path}")
-                file_content = process_csv(file_path)
-            elif file_path.endswith('.txt'):
-                logger.debug(f"Processing text file: {file_path}")
-                file_content = process_text_file(file_path)
-            # Add more file type handlers as needed
+            try:
+                # Process based on file extension
+                if file_extension in ['.csv', '.tsv']:
+                    logger.debug(f"Processing CSV/TSV file: {file_path}")
+                    file_content = process_csv(file_path)
+                elif file_extension in ['.txt', '.log', '.md']:
+                    logger.debug(f"Processing text file: {file_path}")
+                    file_content = process_text_file(file_path)
+                elif file_extension == '.json':
+                    logger.debug(f"Processing JSON file: {file_path}")
+                    file_content = parse_json(file_path)
+                elif file_extension in ['.py', '.js', '.html', '.css', '.xml']:
+                    logger.debug(f"Processing code file: {file_path}")
+                    file_content = process_text_file(file_path)
+                else:
+                    # For unsupported file types, try to read it as text
+                    logger.debug(f"Attempting to process unknown file type: {file_path}")
+                    try:
+                        file_content = process_text_file(file_path)
+                    except Exception as e:
+                        logger.warning(f"Could not process file as text: {str(e)}")
+                        file_content = f"Unsupported file type: {file_extension}"
             
-            if file_content:
-                file_name = os.path.basename(file_path)
+            except Exception as e:
+                logger.error(f"Error processing file {file_name}: {str(e)}")
+                file_content = f"Error processing file: {str(e)}"
+            
+            # Store the file content
+            if file_content is not None:
                 file_contents[file_name] = file_content
     
     # Generate answer using LLM
@@ -88,11 +125,18 @@ def generate_answer(question, file_contents):
             prompt += f"File: {file_name}\n{content}\n\n"
     
     prompt += (
-        "You are an expert in Tools in Data Science. The user has provided a question from a graded assignment. "
-        "Analyze the question and any provided file contents, and provide the exact answer that should be submitted. "
-        "The answer should be concise and direct - just the value or text that needs to be entered, "
-        "without any explanation or additional text. "
-        "If the question requires extracting a value from a CSV file's 'answer' column, return only that value."
+        "You are an expert in Tools in Data Science from IIT Madras' Online Degree program. "
+        "The user has provided a question from one of the 5 graded assignments. "
+        "Follow these strict rules when providing your answer:\n"
+        "1. Analyze the question and any provided file contents carefully.\n"
+        "2. Provide ONLY the exact answer value that should be submitted - nothing else.\n"
+        "3. Do not include explanations or any additional text.\n"
+        "4. If the question requires extracting a value from a CSV file's 'answer' column, return only that value.\n"
+        "5. If the question asks for a code output, provide only that output text.\n"
+        "6. Provide the shortest possible valid answer.\n"
+        "7. Make sure your answer can be directly entered in the assignment submission field.\n"
+        "8. If the answer is a number, provide just the number without units unless explicitly requested.\n"
+        "9. Your response must be a single value or short text that directly answers the assignment question."
     )
     
     try:
@@ -101,7 +145,7 @@ def generate_answer(question, file_contents):
         response = openai_client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a Tools in Data Science expert. Provide direct, concise answers."},
+                {"role": "system", "content": "You are an IIT Madras Tools in Data Science expert. When answering assignment questions, provide ONLY the exact answer - no explanation, no surrounding text. For code output questions, return only the output text. For CSV data questions with an 'answer' column, extract and return only that value. Give the shortest valid answer possible."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.1,  # Lower temperature for more deterministic answers
@@ -111,16 +155,43 @@ def generate_answer(question, file_contents):
         # Extract the answer from the response
         answer = response.choices[0].message.content.strip()
         
-        # Clean up the answer - remove any explanations
-        lines = answer.split('\n')
+        # Clean up the answer - apply multiple stages of cleanup to ensure 
+        # we get only the exact answer value
+        
+        # First, split into lines and remove any empty ones
+        lines = [line.strip() for line in answer.split('\n') if line.strip()]
+        
         if len(lines) > 1:
-            # If there are multiple lines, try to find the most relevant one
-            # which is usually the shortest line that contains substantive content
-            # or the line that appears to be just the value
-            valid_lines = [line.strip() for line in lines if line.strip()]
-            if valid_lines:
-                # Sort by length and take the shortest non-empty line
-                answer = min(valid_lines, key=len)
+            # If there are multiple lines, apply heuristics to find the actual answer
+            
+            # Check for common answer patterns
+            for line in lines:
+                # Check if line starts with "Answer:" or similar
+                if line.lower().startswith(('answer:', 'the answer is:', 'result:')):
+                    answer = line.split(':', 1)[1].strip()
+                    break
+            else:
+                # If no "Answer:" prefix found, use the shortest substantive line
+                # Filter out very short lines (less than 1 char) which might be punctuation
+                valid_lines = [line for line in lines if len(line) >= 1]
+                if valid_lines:
+                    # Sort by length and take the shortest non-empty line
+                    answer = min(valid_lines, key=len)
+        else:
+            # If only one line, use it directly
+            answer = lines[0]
+        
+        # Additional cleaning: remove quotes, if they're wrapping the entire answer
+        answer = answer.strip('"\'')
+        
+        # Remove "The answer is: " or similar prefixes if they exist
+        common_prefixes = [
+            "the answer is ", "answer: ", "result: ", "value: ", 
+            "the value is ", "output: ", "the output is "
+        ]
+        for prefix in common_prefixes:
+            if answer.lower().startswith(prefix):
+                answer = answer[len(prefix):].strip()
         
         return answer
         

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDS Solver - IITM Tools in Data Science</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">TDS Solver</a>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="text-center">IIT Madras Tools in Data Science Solver</h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="lead">Enter your assignment question below and upload any necessary files. The system will automatically generate an answer for you.</p>
+                        
+                        <form id="question-form" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="question" class="form-label">Question:</label>
+                                <textarea class="form-control" id="question" name="question" rows="4" required placeholder="Paste your Tools in Data Science assignment question here..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="file" class="form-label">Upload File (if required):</label>
+                                <input class="form-control" type="file" id="file" name="file">
+                                <div class="form-text">Upload any ZIP, CSV, or other files mentioned in the question.</div>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">Get Answer</button>
+                            </div>
+                        </form>
+                        
+                        <div id="result-section" class="mt-4 d-none">
+                            <h4>Answer:</h4>
+                            <div class="alert alert-success">
+                                <pre id="answer-text"></pre>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button id="copy-button" class="btn btn-secondary">Copy to Clipboard</button>
+                            </div>
+                        </div>
+                        
+                        <div id="error-section" class="mt-4 d-none">
+                            <div class="alert alert-danger">
+                                <p id="error-text"></p>
+                            </div>
+                        </div>
+                        
+                        <div id="loading-section" class="mt-4 d-none text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Processing your question... This may take a few moments.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h3>API Usage</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>You can also use our API directly:</p>
+                        <pre><code>curl -X POST "/api/" \
+  -H "Content-Type: multipart/form-data" \
+  -F "question=Your question here" \
+  -F "file=@path/to/your/file.zip"</code></pre>
+                        <p>The response will be a JSON object with the answer:</p>
+                        <pre><code>{
+  "answer": "Your answer will appear here"
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer mt-5 py-3 bg-dark">
+        <div class="container text-center">
+            <span class="text-muted">TDS Solver for IIT Madras Online Degree in Data Science</span>
+        </div>
+    </footer>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

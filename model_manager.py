@@ -41,7 +41,7 @@ class ModelManager:
                 # Configure OpenAI client to use AI Proxy
                 self.client = openai.OpenAI(
                     api_key=self.aiproxy_token,
-                    base_url="https://aiproxy.sanand.workers.dev/openai"
+                    base_url="https://aiproxy.sanand.workers.dev/openai/v1"
                 )
                 self.available_models.append("openai")
                 logger.debug("OpenAI API configured successfully using AI Proxy")

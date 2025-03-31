@@ -6,7 +6,6 @@ requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.49.0",
     "email-validator>=2.2.0",
-    "fastapi>=0.115.12",
     "flask>=3.1.0",
     "flask-sqlalchemy>=3.1.1",
     "google-generativeai>=0.8.4",
@@ -15,5 +14,4 @@ dependencies = [
     "openai>=1.69.0",
     "pandas>=2.2.3",
     "psycopg2-binary>=2.9.10",
-    "uvicorn>=0.34.0",
 ]

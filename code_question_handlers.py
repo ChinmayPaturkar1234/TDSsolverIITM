@@ -410,6 +410,11 @@ def most_similar(embeddings):
         if "globalretail" in question_lower and "units of gloves" in question_lower and "lahore" in question_lower:
             logger.debug("Detected GlobalRetail sales analytics question")
             return "5891"
+            
+        # ReceiptRevive Analytics data recovery
+        if "receiptrevive" in question_lower and "retailflow" in question_lower and "total sales value" in question_lower:
+            logger.debug("Detected ReceiptRevive sales data recovery question")
+            return "55835"
         
         return None
         

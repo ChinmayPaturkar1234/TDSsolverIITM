@@ -179,9 +179,10 @@ class CodeExecutor:
         
         finally:
             # Clean up the temporary file
-            if 'temp_path' in locals() and os.path.exists(temp_path):
+            if 'temp_path' in locals():
                 try:
-                    os.unlink(temp_path)
+                    if os.path.exists(temp_path):
+                        os.unlink(temp_path)
                 except Exception as cleanup_err:
                     logger.warning(f"Error cleaning up temporary file: {str(cleanup_err)}")
     

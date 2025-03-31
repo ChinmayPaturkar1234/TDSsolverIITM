@@ -31,14 +31,29 @@ class ModelManager:
             except Exception as e:
                 logger.error(f"Error configuring Gemini API: {str(e)}")
         
-        # Initialize OpenAI if available
+        # Initialize OpenAI if available - either direct API or AI Proxy
         self.openai_api_key = os.environ.get("OPENAI_API_KEY")
-        if self.openai_api_key:
+        self.aiproxy_token = os.environ.get("AIPROXY_TOKEN")
+        
+        # Prioritize using AI Proxy if token is available
+        if self.aiproxy_token:
+            try:
+                # Configure OpenAI client to use AI Proxy
+                self.client = openai.OpenAI(
+                    api_key=self.aiproxy_token,
+                    base_url="https://aiproxy.sanand.workers.dev/openai"
+                )
+                self.available_models.append("openai")
+                logger.debug("OpenAI API configured successfully using AI Proxy")
+            except Exception as e:
+                logger.error(f"Error configuring OpenAI API via AI Proxy: {str(e)}")
+        # Fall back to direct OpenAI API if proxy token not available
+        elif self.openai_api_key:
             try:
                 openai.api_key = self.openai_api_key
                 self.client = openai.OpenAI(api_key=self.openai_api_key)
                 self.available_models.append("openai")
-                logger.debug("OpenAI API configured successfully")
+                logger.debug("OpenAI API configured successfully using direct API")
             except Exception as e:
                 logger.error(f"Error configuring OpenAI API: {str(e)}")
         
@@ -184,9 +199,17 @@ class ModelManager:
             str: The model's response
         """
         try:
-            # the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-            # do not change this unless explicitly requested by the user
-            model = "gpt-4o"
+            # Use appropriate model based on whether we're using AI Proxy or direct OpenAI
+            if hasattr(self, 'aiproxy_token') and self.aiproxy_token:
+                # AI Proxy only supports gpt-4o-mini
+                model = "gpt-4o-mini"
+                logger.debug("Using gpt-4o-mini model via AI Proxy")
+            else:
+                # Direct OpenAI API - use the newest model
+                # the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+                # do not change this unless explicitly requested by the user
+                model = "gpt-4o"
+                logger.debug("Using gpt-4o model via direct OpenAI API")
             
             response = self.client.chat.completions.create(
                 model=model,

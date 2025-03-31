@@ -69,11 +69,35 @@ def process_text_file(file_path):
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # If the file is very large, return a summary
-        if len(content) > 10000:
-            return f"Text file (first 10000 chars):\n{content[:10000]}..."
+        # Check if this is a code file by extension
+        file_extension = file_path.split('.')[-1].lower() if '.' in file_path else ''
+        code_extensions = ['py', 'js', 'java', 'cpp', 'c', 'html', 'css', 'r', 'sql', 'sh']
         
-        return f"Text file contents:\n{content}"
+        if file_extension in code_extensions:
+            code_type = {
+                'py': 'Python',
+                'js': 'JavaScript',
+                'java': 'Java',
+                'cpp': 'C++',
+                'c': 'C',
+                'html': 'HTML',
+                'css': 'CSS',
+                'r': 'R',
+                'sql': 'SQL',
+                'sh': 'Shell'
+            }.get(file_extension, 'Code')
+            
+            # If the file is very large, return a summary
+            if len(content) > 10000:
+                return f"{code_type} code file (first 10000 chars):\n```{file_extension}\n{content[:10000]}\n```..."
+            
+            return f"{code_type} code file:\n```{file_extension}\n{content}\n```"
+        else:
+            # For regular text files
+            if len(content) > 10000:
+                return f"Text file (first 10000 chars):\n{content[:10000]}..."
+            
+            return f"Text file contents:\n{content}"
     except Exception as e:
         logger.error(f"Error processing text file: {str(e)}")
         return f"Error processing text file: {str(e)}"

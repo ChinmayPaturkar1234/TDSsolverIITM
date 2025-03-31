@@ -55,6 +55,15 @@ class CodeQuestionHandler:
                 except Exception as e:
                     logger.warning(f"Error in specialized handler: {str(e)}")
         
+        # Check for embedding similarity questions (not pattern-based)
+        try:
+            result = self.handle_embedding_similarity(question)
+            if result:
+                logger.debug("Successfully handled embedding similarity question")
+                return True, result
+        except Exception as e:
+            logger.warning(f"Error in embedding similarity handler: {str(e)}")
+        
         # No specialized handler matched or they all failed
         return False, None
     
@@ -259,4 +268,44 @@ class CodeQuestionHandler:
         # For now, we only handle known formulas
         # In the future, we could implement a simple spreadsheet formula parser
         logger.debug(f"Extracted formula: {formula}, but no implementation for it")
+        return None
+    
+    def handle_embedding_similarity(self, question):
+        """
+        Handle questions about finding most similar embeddings
+        
+        Args:
+            question (str): The question text
+            
+        Returns:
+            str: The embedding solution or None if not handled
+        """
+        # Check if this is an embedding similarity question
+        if "embeddings" in question.lower() and "cosine similarity" in question.lower() and "most similar" in question.lower():
+            logger.debug("Detected embedding similarity question")
+            
+            # Return the correct embedding similarity function
+            embedding_solution = """import numpy as np
+from itertools import combinations
+
+def most_similar(embeddings):
+    phrase_keys = list(embeddings.keys())
+    phrase_vectors = [np.array(embeddings[key]) for key in phrase_keys]
+    
+    max_similarity = -1  # Minimum possible cosine similarity
+    most_similar_pair = None
+    
+    for (i, j) in combinations(range(len(phrase_keys)), 2):
+        # Compute cosine similarity
+        sim = np.dot(phrase_vectors[i], phrase_vectors[j]) / (np.linalg.norm(phrase_vectors[i]) * np.linalg.norm(phrase_vectors[j]))
+        
+        # Check if it's the highest similarity found
+        if sim > max_similarity:
+            max_similarity = sim
+            most_similar_pair = (phrase_keys[i], phrase_keys[j])
+    
+    return most_similar_pair"""
+            
+            return embedding_solution
+        
         return None

@@ -9,31 +9,21 @@ def most_similar(embeddings):
         tuple: A tuple containing the two most similar phrases
     """
     import numpy as np
-    from numpy.linalg import norm
+    from itertools import combinations
     
-    # Extract phrases and their embeddings
-    phrases = list(embeddings.keys())
+    phrase_keys = list(embeddings.keys())
+    phrase_vectors = [np.array(embeddings[key]) for key in phrase_keys]
     
-    # Calculate cosine similarity between all pairs
-    max_similarity = -1
+    max_similarity = -1  # Minimum possible cosine similarity
     most_similar_pair = None
     
-    # Compare each pair
-    for i in range(len(phrases)):
-        for j in range(i + 1, len(phrases)):
-            phrase1 = phrases[i]
-            phrase2 = phrases[j]
-            
-            # Get embeddings
-            embedding1 = np.array(embeddings[phrase1])
-            embedding2 = np.array(embeddings[phrase2])
-            
-            # Calculate cosine similarity: cos(θ) = (A·B) / (||A||×||B||)
-            similarity = np.dot(embedding1, embedding2) / (norm(embedding1) * norm(embedding2))
-            
-            # Update most similar pair if necessary
-            if similarity > max_similarity:
-                max_similarity = similarity
-                most_similar_pair = (phrase1, phrase2)
+    for (i, j) in combinations(range(len(phrase_keys)), 2):
+        # Compute cosine similarity
+        sim = np.dot(phrase_vectors[i], phrase_vectors[j]) / (np.linalg.norm(phrase_vectors[i]) * np.linalg.norm(phrase_vectors[j]))
+        
+        # Check if it's the highest similarity found
+        if sim > max_similarity:
+            max_similarity = sim
+            most_similar_pair = (phrase_keys[i], phrase_keys[j])
     
     return most_similar_pair
